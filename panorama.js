@@ -1,5 +1,15 @@
 var Class = Wrlx.Class;
 
+// Some utils (stolen from Coffee)
+var _hasProp = Object.prototype.hasOwnProperty,
+    _extend = function(target) {
+      var sources = Array.prototype.slice.call(arguments, 1);
+      _.each(sources, function(source) {
+        for (var key in source) { target[key] = source[key]; }
+      });
+      return target;
+};
+
 function build_path(root) {
   var path_description = Array.prototype.slice.call(arguments, 1),
       path = path_description.join('.');
@@ -37,7 +47,7 @@ function tree_iterator (tree, fn, current_path) {
 function tree_map(tree, fn) {
   var result = {},
       iterator = function (tree, key, node, path) {
-        tree_walk_to(result, path, true)[key] = fn(node);
+        tree_walk_to(result, path, true)[key] = fn(node, build_path(path, key));
       };
   tree_iterator(tree, iterator);
   return result;
@@ -60,21 +70,42 @@ var UIElements = {
 
   extract_ui_elements: function (ui_description, find) {
     var self = this;
-    var process_ui_element = function (selector) {
+    var process_ui_element = function (selector, ui_path) {
       if (typeof selector != 'string') { throw new Error('Malformed ui tree description'); }
-      return self.generate_element_interface(find(selector));
+      return self.generate_element_interface(find(selector), ui_path, self);
     };
     return tree_map(ui_description, process_ui_element);
   },
 
-  generate_element_interface: function (element) {
-    var interface = function(value) {
-      if (value === undefined)
-        { return element.html(); }
-      else
-        { return element.html(value); }
+  generate_element_interface: function (element, path, widget) {
+    // Convenience inteface
+    var interface = function (value) {
+      if (value === undefined) {
+        return interface.hget();
+      } else {
+        return interface.hset(value);
+      }
     };
-    return $.extend(interface, element);
+
+    // Prevent nasty jQuery error messages
+    _.bindAll(element);
+
+    // A lot of mixed functionality
+    var mixins = _extend({}, {
+      hset: function(value) {
+        return this.html(value);
+      },
+      hget: function() {
+        return this.html();
+      },
+      svalue: function(v) {
+        this.attr('value', v);
+      },
+      _ui_path: path,
+      _widget: widget,
+    }, element, Filters, Hooks);
+
+    return _extend(interface, mixins);
   },
 
   set_values: function(values_tree) {
@@ -82,13 +113,11 @@ var UIElements = {
       var value = tree_walk_to(values_tree, build_path(path, key));
       if (value === undefined) return;
       if (typeof value == 'string')
-        { node.html(value); }
+        { node.hset(value); }
       else if (typeof value == 'object') {
         _.each(value, function (data, prop) {
-          if (_.isArray(data))
-            { node[prop].apply(node, data); }
-          else
-            { node[prop](data); }
+          _.isArray(data) || (data = [data]);
+          node[prop].apply(node, data);
         });
       } else {
         throw new Error('Bad initial values');
@@ -96,6 +125,68 @@ var UIElements = {
     });
     return this;
   },
+
+};
+
+var Filters = {
+
+  add_getter_filter: function (property, filter) {
+    if (filter == undefined) return this.add_getter_filter('html', property);
+    var previous = this[property],
+        self = this;
+    this[property] = function (value) {
+      if (value !== undefined) return previous.call(self, value);
+      return filter.call(self, previous.call(self));
+    };
+    return this;
+  },
+
+  add_setter_filter: function (property, filter) {
+    if (filter == undefined) return this.add_setter_filter('html', property);
+    var previous = this[property],
+        self = this;
+    this[property] = function(value) {
+      if (value === undefined) return previous.call(self);
+      if(value = filter.call(self, value))
+        return previous.call(self, value);
+    };
+    return this;
+  },
+
+  add_animated_setter_filter: function (property, filter, timeout, initial, args) {
+    var previous = this[property],
+        self = this,
+        timeout = timeout || 0;
+    this[property] = function(value) {
+      var fixed_args = args || [];
+      if (value === undefined) return previous.call(self);
+      var iter_value = (initial === undefined) ?  value : initial;
+      (function action () {
+        var iter_args = [iter_value, value].concat(fixed_args);
+        iter_value = filter.apply(self, iter_args);
+        if (iter_value !== undefined) {
+          previous.call(self, iter_value);
+          setTimeout(action, timeout);
+        }
+      })();
+    };
+    return this;
+  },
+
+};
+
+var Hooks = {
+
+  add_change_hook: function(property, callback) {
+    var self = this,
+        previous = self[property];
+    self[property] = function(value) {
+      if (value == undefined) return previous.call(self);
+      previous.call(self, value);
+      callback.call(self, value, self._widget);
+    };
+    return this;
+  }
 
 };
 
