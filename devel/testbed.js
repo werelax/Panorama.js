@@ -14,7 +14,7 @@ var crack_password_filter = function(acc, value, visited) {
   return garbage.join('');
 }
 
-var TestWidget = Widget.create({
+var TestWidget = Panorama.Widget.create({
   ui: {
     input:   { text:   '#e_test_widget_input_text'},
     buttons: { update: '#e_test_widget_button_update'},
