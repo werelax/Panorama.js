@@ -31,6 +31,12 @@ var TestWidget = Panorama.Widget.create({
     }
   },
 
+  data: {
+    initial_text: {display: 'html'},
+    placeholder: {input: {text: ['attr', 'placeholder']}},
+    button_caption: {buttons: {update: 'val'}}
+  },
+
   template: function() { return $('#temp_1').html(); },
 
   init: function() {
@@ -57,7 +63,7 @@ var TestWidget = Panorama.Widget.create({
 
 $(function () {
   window.tw = new TestWidget();
-  tw.set_values({
+  tw.set_ui_values({
     display: 'Initial Text',
     input: {
       text: {attr: ['placeholder', 'type something here...']}},

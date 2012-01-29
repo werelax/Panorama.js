@@ -1,3 +1,16 @@
+/*** Objectives:
+*
+* 1. Explicit is better than implicit
+* 2. Put the css selectors in one place, with a clear meaning
+* 3. Pure HTML templates
+* 4. Explicit data manipulation
+* 5. Never lose the reference to a relevant DOM node
+* 6. Put as much as possible in the code (because the code is programmable)
+* 7. Events are great. Crate custom, meaningful events to pass messages between componentes.
+* 8. Isolate everything else.
+*
+***/
+
 (function (exports) {
   var Class = Wrlx.Class;
 
@@ -34,16 +47,26 @@
     }
   }
 
-  function tree_iterator (tree, fn, current_path) {
+  function tree_iterator(tree, fn, current_path) {
     current_path || (current_path = '');
     _.each(tree, function (node, key) {
-      if (typeof node == 'object') {
+      if (typeof node == 'object' && !_.isArray(node)) {
         return tree_iterator(node, fn, build_path(current_path, key));
       } else {
         return fn(tree, key, node, current_path);
       }
     });
   }
+
+  function tree_to_path(one_way_tree) {
+    var return_value;
+    tree_iterator(one_way_tree, function(tree, key, node, path) {
+      return_value = [build_path(path, key), node];
+    });
+    return return_value;
+  }
+
+  window.ttp = tree_to_path;
 
   function tree_map(tree, fn) {
     var result = {},
@@ -109,7 +132,7 @@
       return _extend(interface, mixins);
     },
 
-    set_values: function(values_tree) {
+    set_ui_values: function(values_tree) {
       tree_iterator(this.ui, function (tree, key, node, path) {
         var value = tree_walk_to(values_tree, build_path(path, key));
         if (value === undefined) return;
@@ -215,6 +238,51 @@
 
   }
 
+  var Data = {
+
+    parse_data_associations: function () {
+      var data_hash = {},
+          data_description = this.data,
+          ui_tree = this.ui,
+          ui_root = this.ui_root,
+          self = this;
+      _.each(data_description, function (description, key) {
+        var node_accesor, args;
+        switch (typeof description) {
+        case 'string':
+          node_accesor = _.bindAll(ui_root.find(description)).html;
+          args = ['html'];
+          break;
+        case 'object':
+          var _ref = tree_to_path(description);
+          node_accesor = tree_walk_to(ui_tree,  _ref[0]);
+          args = _.isArray(_ref[1]) ? _ref[1] : [_ref[1]];
+          break
+        default:
+          throw new Error('Bad data description');
+        }
+        var method = args.shift();
+        data_hash[key] = function() {
+          var caller_args = Array.prototype.slice.call(arguments, 0);
+          return node_accesor[method].apply(self, args.concat(caller_args))
+        };
+      });
+      return data_hash;
+    },
+
+    set_data_values: function (values) {
+      var data_hash = this.data;
+      _.each(values, function (value, key) { if (data_hash[key]) data_hash[key](value); });
+    },
+
+    to_json: function () {
+      var json = {};
+      _.each(this.data, function(accesor, key) { json[key] = accesor(); })
+      return json;
+    },
+
+  };
+
   // Main Class
 
   var Widget = Class.create({
@@ -228,6 +296,7 @@
       this.ui_root = el;
       initial_values && this.set_values(initial_values);
       this.events && this.bind_events();
+      this.data && (this.data = this.parse_data_associations());
     },
 
     render_into: function (container) {
@@ -238,6 +307,7 @@
 
   Widget.include(UIElements);
   Widget.include(Events);
+  Widget.include(Data);
 
   exports['Widget'] = Widget;
 })(this.Panorama || (this.Panorama = {}))
