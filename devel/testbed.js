@@ -37,9 +37,9 @@ var TestWidget = Panorama.Widget.create({
     button_caption: {buttons: {update: 'val'}}
   },
 
-  template: function() { return $('#temp_1').html(); },
+  template: function () { return $('#temp_1').html(); },
 
-  init: function() {
+  init: function () {
     this.super('init', arguments);
 
     var self = this;
