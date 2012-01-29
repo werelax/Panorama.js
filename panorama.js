@@ -109,7 +109,7 @@ var UIElements = {
   },
 
   set_values: function(values_tree) {
-    tree_iterator(this.ui, function(tree, key, node, path) {
+    tree_iterator(this.ui, function (tree, key, node, path) {
       var value = tree_walk_to(values_tree, build_path(path, key));
       if (value === undefined) return;
       if (typeof value == 'string')
@@ -190,15 +190,41 @@ var Hooks = {
 
 };
 
+var Events = {
+
+  bind_events: function() {
+    var event_tree = this.events,
+        selector_tree = this.ui_selectors,
+        self = this;
+    tree_iterator(this.ui, function (tree, key, node, path) {
+      var events = tree_walk_to(event_tree, build_path(path, key)),
+          selector = tree_walk_to(selector_tree, build_path(path, key));
+      if (events === undefined) return;
+      _.each(events, function (handler, event) {
+        if (typeof handler == 'string') handler = self[handler];
+        self.ui_root.delegate(selector, event, function () {
+          var el = this,
+              args = Array.prototype.slice.call(arguments, 0);
+          handler.apply(self, [el].concat(args));
+        });
+      });
+    });
+    return this;
+  },
+
+}
+
 var Widget = Class.create({
 
   init: function (initial_values) {
     var el;
     if (typeof this.template == 'function') { this.template = this.template(); }
     el = $(this.template);
-    this.ui = this.extract_ui_elements(this.ui, _.bind(el.find, el));
+    this.ui_selectors = this.ui;
+    this.ui = this.extract_ui_elements(this.ui_selectors, _.bind(el.find, el));
     this.ui_root = el;
     initial_values && this.set_values(initial_values);
+    this.events && this.bind_events();
   },
 
   render_into: function (container) {
@@ -208,3 +234,4 @@ var Widget = Class.create({
 });
 
 Widget.include(UIElements);
+Widget.include(Events);
