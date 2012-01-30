@@ -66,8 +66,6 @@
     return return_value;
   }
 
-  window.ttp = tree_to_path;
-
   function tree_map(tree, fn) {
     var result = {},
         iterator = function (tree, key, node, path) {
@@ -294,9 +292,9 @@
       this.ui_selectors = this.ui;
       this.ui = this.extract_ui_elements(this.ui_selectors, _.bind(el.find, el));
       this.ui_root = el;
-      initial_values && this.set_values(initial_values);
       this.events && this.bind_events();
       this.data && (this.data = this.parse_data_associations());
+      initial_values && this.set_data_values(initial_values);
     },
 
     render_into: function (container) {

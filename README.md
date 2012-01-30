@@ -4,7 +4,7 @@ An experimental widget library, aiming to untangle the messy UI code.
 
 ## Motivation behind Panorama.js
 
-The Javascript code written to manage UI behaviour gets very ugly very quickly, because the programmer usually writes it in event-per-event manner ("When I click here these thing happens. If I click on these other thing then some other action triggers. And then when this value changes the label text over there blinks. And.."), failing to build general, solid fundations for future changes and understanding.
+The Javascript code written to manage UI behaviour gets very ugly very quickly, because the programmer usually writes it in event-by-event manner ("When I click here these thing happens. If I click on these other thing then some other action triggers. And then when this value changes the label text over there blinks. And.."), failing to build general, solid fundations for future changes and understanding.
 
 ## Goals
 
@@ -69,7 +69,7 @@ to set a value inside the `<span>` or
 alert(instance.ui.sample_element.html());
 ```
 
-to read the contents. A note abot selectors: prefix every selector used for logic with 'e'. Also, use underscores for separating IDs and dashes for separating clases. For example, `e_my_id_selector` of `e-my-class-selector`.
+to read the contents. A note abot selectors: prefix every selector used for logic with 'e'. Also, use underscores for separating IDs and dashes for separating clases. For example, `e_my_id_selector` or `e-my-class-selector`.
 
 You can nest objects in the `ui` description for groupping related elements.
 
