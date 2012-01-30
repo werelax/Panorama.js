@@ -75,7 +75,7 @@ You can nest objects in the `ui` description for groupping related elements.
 
 ```javascript
 var SimpleWidget = Panorama.Widget.create({
-	template: '<div> <input type="button" id="e_button_1" /> <input type="e_button_2" /></div>'
+	template: '<div> <input type="button" id="e_button_1" /> <input type="button" id="e_button_2" /></div>'
 	ui: {
 		buttons: {
 			button_1: '#e_button_1',
@@ -175,6 +175,7 @@ Just call `inst.render_into(selector-or-dom-object)` to render the widget inside
 
 Some things that I have not yet deciced if they will be kept or thrown away.
 
+
 ### Filters
 
 You can build a stack of filters around any accesor of the ui elements to modify their behaviour. This is intended to be a very flexible way to add effects or transformations to the displayed/readed data.
@@ -200,11 +201,27 @@ So, doing `this.ui.display()` will first filter the result and the returned valu
 	});
 ```
 
-for applying the filter _before_ setting the value to the `ui.display` element.
+for applying the filter _before_ setting the value to the `ui.display` element. If the setter filter returns `undefined` then the operation will be aborted and the element will hold their previous value.
 
 There is a more advanced way to describe animated filters with `add_animated_setter_filter`, but it's quite complicated and I refer you to the `testbed.js` file for an example.
 
 ### Hooks
 
+For triggering some functionality right after the modification of some attribute, Panorama.js lets you register hooks. This can be used to start animations, flash messages, etc,... For example:
+
+```javascript
+	// widget definition code omitted...
+	init: function() {
+		this.super('init', arguments);
+
+		// Assuming some ui element called 'display'
+		this.ui.display.add_change_hook('html', function(value, widget) {
+			var self = this;
+			self.fadeOut('fast', function () { self.fadeIn('fast'); });
+		});
+	}
+```
+
+Will fade out and fade in the `ui.display` element after any modification of the `html` attribute. The hook will be triggered if you call the `.html` accesor directly, but also in the modifications done by `set_data_values` and `set_ui_values`.
 
 
